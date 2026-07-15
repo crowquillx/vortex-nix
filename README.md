@@ -12,8 +12,27 @@ nix run path:.
 Or install it into your user profile:
 
 ```console
-nix profile install path:.#vortex
+nix profile install --accept-flake-config github:crowquillx/vortex-nix#vortex
 vortex
+```
+
+## Binary cache
+
+Successful builds from the `main` branch are published to the public
+`vortex-nix` Cachix cache. Passing `--accept-flake-config` lets Nix use the
+cache URL and signing key declared by this flake instead of rebuilding Vortex
+locally.
+
+When consuming this package as an input of another flake, add the cache to the
+root flake because Nix only applies `nixConfig` from the flake being invoked:
+
+```nix
+nixConfig = {
+  extra-substituters = [ "https://vortex-nix.cachix.org" ];
+  extra-trusted-public-keys = [
+    "vortex-nix.cachix.org-1:7+ZVU0umNp8sz1JqZV/bRcbVgemNuNtzN5KiJxihFRY="
+  ];
+};
 ```
 
 The package registers the `nxm://` URL scheme through its desktop entry. When

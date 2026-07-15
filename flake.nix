@@ -1,6 +1,13 @@
 {
   description = "Native NixOS package for Nexus Mods Vortex";
 
+  nixConfig = {
+    extra-substituters = [ "https://vortex-nix.cachix.org" ];
+    extra-trusted-public-keys = [
+      "vortex-nix.cachix.org-1:7+ZVU0umNp8sz1JqZV/bRcbVgemNuNtzN5KiJxihFRY="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     vortex-src = {
