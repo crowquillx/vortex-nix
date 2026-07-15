@@ -36,6 +36,7 @@ jobs:
         with:
           name: vortex-nix
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          skipPush: true
 
       - name: Check flake
         run: nix flake check --print-build-logs
@@ -43,7 +44,10 @@ jobs:
       - name: Build Vortex
         run: nix build .#vortex --print-build-logs
 
-      - name: Pin recent builds
+      - name: Push and pin build
         env:
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
-        run: cachix pin vortex-nix latest "$(readlink -f result)" --keep-revisions 3
+        run: |
+          store_path="$(readlink -f result)"
+          cachix push vortex-nix "$store_path"
+          cachix pin vortex-nix latest "$store_path" --keep-revisions 3
