@@ -1,0 +1,124 @@
+diff --git a/packages/exe-version/src/index.ts b/packages/exe-version/src/index.ts
+index 5c00f45..446e54b 100644
+--- a/packages/exe-version/src/index.ts
++++ b/packages/exe-version/src/index.ts
+@@ -9,6 +9,5 @@ import { readVersionInfo } from "./peVersion";
+ 
+ export function getFileVersion(exeFile: string): string {
+-  if (process.platform !== "win32") return "";
+   const info = readVersionInfo(exeFile);
+   if (info === undefined) return "";
+   return info.fileVersion.join(".");
+@@ -15,7 +14,6 @@ export function getFileVersion(exeFile: string): string {
+ }
+ 
+ export function getProductVersion(exeFile: string): string {
+-  if (process.platform !== "win32") return "";
+   const info = readVersionInfo(exeFile);
+   if (info === undefined) return "";
+   return info.productVersion.join(".");
+@@ -22,14 +20,12 @@ export function getProductVersion(exeFile: string): string {
+ }
+ 
+ export function getFileVersionLocalized(exeFile: string): string {
+-  if (process.platform !== "win32") return getFileVersion(exeFile);
+   const info = readVersionInfo(exeFile);
+   if (info === undefined) return "";
+   return info.fileVersionString;
+ }
+ 
+ export function getProductVersionLocalized(exeFile: string): string {
+-  if (process.platform !== "win32") return getProductVersion(exeFile);
+   const info = readVersionInfo(exeFile);
+   if (info === undefined) return "";
+   return info.productVersionString;
+diff --git a/extensions/games/game-baldursgate3/src/util.ts b/extensions/games/game-baldursgate3/src/util.ts
+index c7d827f..614529b 100644
+--- a/extensions/games/game-baldursgate3/src/util.ts
++++ b/extensions/games/game-baldursgate3/src/util.ts
+@@ -34,12 +34,43 @@ export function getGameDataPath(api) {
+   }
+ }
+ 
+-export function documentsPath() {
+-  return path.join(util.getVortexPath("localAppData"), "Larian Studios", "Baldur's Gate 3");
++const BG3_STEAM_ID = "1086940";
++let cachedDocumentsPath: string | undefined;
++
++/**
++ * Resolve BG3's Windows Local AppData directory on the host filesystem.
++ * Native Linux Vortex runs outside Proton, so Electron's localAppData points
++ * at ~/Local rather than at the game's Wine prefix.
++ */
++export function documentsPath(gamePath?: string) {
++  if (process.platform !== "win32" && gamePath !== undefined) {
++    const commonPath = path.dirname(gamePath);
++    const steamAppsPath = path.dirname(commonPath);
++    if (path.basename(commonPath) === "common" && path.basename(steamAppsPath) === "steamapps") {
++      cachedDocumentsPath = path.join(
++        steamAppsPath,
++        "compatdata",
++        BG3_STEAM_ID,
++        "pfx",
++        "drive_c",
++        "users",
++        "steamuser",
++        "AppData",
++        "Local",
++        "Larian Studios",
++        "Baldur's Gate 3",
++      );
++    }
++  }
++
++  return (
++    cachedDocumentsPath ??
++    path.join(util.getVortexPath("localAppData"), "Larian Studios", "Baldur's Gate 3")
++  );
+ }
+ 
+-export function modsPath() {
+-  return path.join(documentsPath(), "Mods");
++export function modsPath(gamePath?: string) {
++  return path.join(documentsPath(gamePath), "Mods");
+ }
+ 
+ export function profilesPath() {
+@@ -60,19 +91,19 @@ export async function globalProfilePath(api: types.IExtensionApi) {
+   return path.join(documentsPath(), bg3ProfileId);
+ }
+ 
+-export const getPlayerProfiles = (() => {
+-  let cached = [];
++export function getPlayerProfiles() {
++  let profiles = [];
+   try {
+-    cached = (fs as any)
++    profiles = (fs as any)
+       .readdirSync(profilesPath())
+       .filter((name) => path.extname(name) === "" && name !== "Default");
+   } catch (err) {
+     if (err.code !== "ENOENT") {
+       throw err;
+     }
+   }
+-  return () => cached;
+-})();
++  return profiles;
++}
+ 
+ // The game's user-facing product version (read via getOwnGameVersion) coerces
+ // to 4.1.1 for the public release. Only pre-release/early-access builds below
+diff --git a/extensions/games/game-baldursgate3/src/index.tsx b/extensions/games/game-baldursgate3/src/index.tsx
+index 3b885ec..f8f44ca 100644
+--- a/extensions/games/game-baldursgate3/src/index.tsx
++++ b/extensions/games/game-baldursgate3/src/index.tsx
+@@ -107,7 +107,7 @@ async function ensureGlobalProfile(api: types.IExtensionApi, discovery: types.ID
+ }
+ 
+ async function prepareForModding(api: types.IExtensionApi, discovery) {
+-  const mp = modsPath();
++  const mp = modsPath(discovery?.path);
+ 
+   const format = await getDefaultModSettingsFormat(api);
+   if (!["v7", "v8"].includes(format)) {
