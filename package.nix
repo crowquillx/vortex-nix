@@ -372,13 +372,12 @@ stdenv.mkDerivation (finalAttrs: {
       desktopName = "Vortex";
       genericName = "Mod Manager";
       comment = "Mod manager for PC games from Nexus Mods";
-      exec = "vortex-nxm %u";
+      exec = "vortex";
       icon = "vortex";
       categories = [
         "Game"
         "Utility"
       ];
-      mimeTypes = [ "x-scheme-handler/nxm" ];
       startupWMClass = "Vortex";
       keywords = [
         "mod"
@@ -387,6 +386,13 @@ stdenv.mkDerivation (finalAttrs: {
         "nexus"
         "games"
       ];
+    })
+    (makeDesktopItem {
+      name = "vortex-nxm";
+      desktopName = "Vortex NXM Handler";
+      noDisplay = true;
+      exec = "vortex-nxm %u";
+      mimeTypes = [ "x-scheme-handler/nxm" ];
     })
   ];
 
