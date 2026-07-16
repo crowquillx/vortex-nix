@@ -122,3 +122,20 @@ index 3b885ec..f8f44ca 100644
  
    const format = await getDefaultModSettingsFormat(api);
    if (!["v7", "v8"].includes(format)) {
+diff --git a/extensions/games/game-baldursgate3/src/installers.ts b/extensions/games/game-baldursgate3/src/installers.ts
+index 2cab76a..b71d1d9 100644
+--- a/extensions/games/game-baldursgate3/src/installers.ts
++++ b/extensions/games/game-baldursgate3/src/installers.ts
+@@ -167 +167,5 @@ export async function installReplacer(files: string[]): Promise<types.IInstallRe
+-  const directories = Array.from(new Set(files.map((file) => path.dirname(file).toUpperCase())));
++  // Match Windows-oriented archive folder names case-insensitively, but keep
++  // the original spelling for path.relative(). Linux paths are case-sensitive,
++  // so uppercasing "Data" here makes every contained file appear to be outside
++  // the selected root and produces an empty (canceled) installation.
++  const directories = Array.from(new Set(files.map((file) => path.dirname(file))));
+@@ -170 +174 @@ export async function installReplacer(files: string[]): Promise<types.IInstallRe
+-    ["PUBLIC", "GENERATED"].includes(path.basename(dir)),
++    ["public", "generated"].includes(path.basename(dir).toLowerCase()),
+@@ -176 +180 @@ export async function installReplacer(files: string[]): Promise<types.IInstallRe
+-    dataPath = directories.find((dir) => path.basename(dir) === "DATA");
++    dataPath = directories.find((dir) => path.basename(dir).toLowerCase() === "data");
