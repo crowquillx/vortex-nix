@@ -1,0 +1,164 @@
+name: Update Vortex release
+
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-vortex-release
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update to latest stable release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Find latest stable release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(gh api repos/Nexus-Mods/Vortex/releases/latest --jq .tag_name)"
+          if [[ ! "$tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "Unexpected release tag: $tag" >&2
+            exit 1
+          fi
+
+          version="${tag#v}"
+          current="$(sed -n 's/^  version = "\([^"]*\)";/\1/p' package.nix)"
+          if [[ -z "$current" ]]; then
+            echo "Could not read the packaged version" >&2
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == "$current" ]]; then
+            echo "update=false" >> "$GITHUB_OUTPUT"
+            echo "Vortex $version is already packaged"
+          else
+            echo "update=true" >> "$GITHUB_OUTPUT"
+            echo "Updating Vortex from $current to $version"
+          fi
+
+      - name: Free runner disk space
+        if: steps.release.outputs.update == 'true'
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
+
+      - name: Install Nix
+        if: steps.release.outputs.update == 'true'
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31
+
+      - name: Update release metadata
+        if: steps.release.outputs.update == 'true'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          replacements = (
+              (Path("package.nix"), r'(?m)^  version = "[^"]*";$', f'  version = "{os.environ["VERSION"]}";'),
+              (Path("flake.nix"), r'(?m)^      url = "github:Nexus-Mods/Vortex/[^"]+";$', f'      url = "github:Nexus-Mods/Vortex/{os.environ["TAG"]}";'),
+          )
+          for path, pattern, replacement in replacements:
+              contents = path.read_text()
+              updated, count = re.subn(pattern, replacement, contents)
+              if count != 1:
+                  raise SystemExit(f"Expected one version reference in {path}, found {count}")
+              path.write_text(updated)
+          PY
+          nix flake lock --update-input vortex-src
+
+      - name: Update pnpm dependency hash
+        if: steps.release.outputs.update == 'true'
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          path = Path("package.nix")
+          contents = path.read_text()
+          updated, count = re.subn(
+              r'(fetcherVersion = 4;\n    hash = )"[^"]+";',
+              r'\1lib.fakeHash;',
+              contents,
+          )
+          if count != 1:
+              raise SystemExit(f"Expected one pnpm dependency hash, found {count}")
+          path.write_text(updated)
+          PY
+
+          set +e
+          nix build .#vortex --no-link --print-build-logs 2>&1 | tee pnpm-hash.log
+          build_status=${PIPESTATUS[0]}
+          set -e
+          hash="$(sed -n 's/^[[:space:]]*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*$/\1/p' pnpm-hash.log | tail -n 1)"
+          rm pnpm-hash.log
+          if [[ -z "$hash" ]]; then
+            echo "Could not determine the pnpm dependency hash (build exited $build_status)" >&2
+            exit 1
+          fi
+
+          HASH="$hash" python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("package.nix")
+          contents = path.read_text()
+          updated, count = re.subn(
+              r'(fetcherVersion = 4;\n    hash = )lib\.fakeHash;',
+              rf'\1"{os.environ["HASH"]}";',
+              contents,
+          )
+          if count != 1:
+              raise SystemExit(f"Expected one fake pnpm dependency hash, found {count}")
+          path.write_text(updated)
+          PY
+
+      - name: Verify update
+        if: steps.release.outputs.update == 'true'
+        run: |
+          nix flake check --no-build
+          nix build .#vortex --no-link --print-build-logs
+
+      - name: Open update pull request
+        if: steps.release.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          branch="automation/vortex-$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add flake.nix flake.lock package.nix
+          git commit -m "vortex: update to $VERSION"
+          git fetch origin "refs/heads/$branch:refs/remotes/origin/$branch" || true
+          git push --force-with-lease origin "HEAD:refs/heads/$branch"
+
+          if ! gh pr view "$branch" --json number >/dev/null 2>&1; then
+            gh pr create \
+              --base "${{ github.event.repository.default_branch }}" \
+              --head "$branch" \
+              --title "vortex: update to $VERSION" \
+              --body "Updates Vortex to the latest stable upstream GitHub release, v$VERSION. The updater verified the flake and completed a package build before opening this pull request."
+          fi

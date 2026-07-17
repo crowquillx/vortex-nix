@@ -1,7 +1,7 @@
 # Vortex for NixOS
 
-This repository builds Nexus Mods' tagged Vortex source directly on NixOS. It
-currently packages Vortex 2.3.0 with nixpkgs' Electron 42 runtime.
+This repository builds Nexus Mods' tagged Vortex source directly on NixOS
+using nixpkgs' Electron 42 runtime.
 
 Run it from this checkout with:
 
@@ -15,6 +15,13 @@ Or install it into your user profile:
 nix profile install --accept-flake-config github:crowquillx/vortex-nix#vortex
 vortex
 ```
+
+## Updates
+
+The daily update workflow follows the latest stable GitHub release from
+`Nexus-Mods/Vortex`. It ignores prereleases and untagged branch commits, updates
+the source lock and dependency hash, verifies a full build, and then opens a
+pull request.
 
 ## Binary cache
 
