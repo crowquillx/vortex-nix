@@ -23,19 +23,19 @@
 }:
 
 let
-  version = "2.3.0";
+  version = "2.4.0";
 
   pnpm = pnpm_11.override { nodejs-slim = nodejs_24; };
   electron = electron_42-bin;
 
   levelPivot = fetchurl {
     url = "https://nexus-mods.github.io/duckdb-level-pivot/current_release/v1.5.1/linux_amd64/level_pivot.duckdb_extension.gz";
-    hash = "sha256-AThZxVr2SnbkegSTpoKhIdKfzh9lyR4863qgYRzLpDo=";
+    hash = "sha256-+CKjeCbhl1VXrv+7MPwaea1KEEi0VaQpugtr8DEBMGU=";
   };
 
   nexusApiSchema = fetchurl {
     url = "https://api.nexusmods.com/openapi.yaml";
-    hash = "sha256-CpyTUyjH9msOMxOI5QPdLRQQlHzmEN7ls9WlzEy+Co0=";
+    hash = "sha256-WCJzAajIow8B+ujJ/fkTz92Ym+5G6v9+27VhkUbubXw=";
   };
 
   # pnpm's deploy command needs the original archives for Git-hosted
@@ -165,7 +165,7 @@ stdenv.mkDerivation (finalAttrs: {
     inherit (finalAttrs) version src;
     inherit pnpm;
     fetcherVersion = 4;
-    hash = "sha256-TLuLIdNxIrKbzt8/ynHKWP4hQSrSFF3/zEXuZpWYbsI=";
+    hash = "sha256-5mnmVYTO7a+vZ4Cr3WrlB9fseBr8QRIFWucv/8CbTA8=";
   };
 
   nativeBuildInputs = [
@@ -208,11 +208,11 @@ stdenv.mkDerivation (finalAttrs: {
 
       substituteInPlace pnpm-workspace.yaml \
         --replace-fail \
-          "git+https://github.com/$repository#$revision" \
+          "github:$repository#$revision" \
           "file:$archive"
       substituteInPlace pnpm-lock.yaml \
         --replace-fail \
-          "git+https://github.com/$repository#$revision" \
+          "github:$repository#$revision" \
           "file:$archive"
       substituteInPlace pnpm-lock.yaml \
         --replace-fail \

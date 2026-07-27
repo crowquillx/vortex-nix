@@ -85,7 +85,41 @@ jobs:
                   raise SystemExit(f"Expected one version reference in {path}, found {count}")
               path.write_text(updated)
           PY
-          nix flake lock --update-input vortex-src
+          nix flake update vortex-src
+
+      - name: Update mutable source hashes
+        if: steps.release.outputs.update == 'true'
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          import subprocess
+          from pathlib import Path
+
+          path = Path("package.nix")
+          contents = path.read_text()
+          for name in ("levelPivot", "nexusApiSchema"):
+              pattern = rf'({name} = fetchurl \{{\n    url = "([^"]+)";\n    hash = )"[^"]+";'
+              match = re.search(pattern, contents)
+              if match is None:
+                  raise SystemExit(f"Could not find mutable source {name}")
+              result = subprocess.run(
+                  ["nix", "store", "prefetch-file", "--json", match.group(2)],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              )
+              source_hash = json.loads(result.stdout)["hash"]
+              contents, count = re.subn(
+                  pattern,
+                  rf'\1"{source_hash}";',
+                  contents,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit(f"Expected one hash for {name}, found {count}")
+          path.write_text(contents)
+          PY
 
       - name: Update pnpm dependency hash
         if: steps.release.outputs.update == 'true'
@@ -107,7 +141,7 @@ jobs:
           PY
 
           set +e
-          nix build .#vortex --no-link --print-build-logs 2>&1 | tee pnpm-hash.log
+          nix build '.#vortex.pnpmDeps' --no-link --print-build-logs 2>&1 | tee pnpm-hash.log
           build_status=${PIPESTATUS[0]}
           set -e
           hash="$(sed -n 's/^[[:space:]]*got:[[:space:]]*\(sha256-[A-Za-z0-9+/=]*\).*$/\1/p' pnpm-hash.log | tail -n 1)"
