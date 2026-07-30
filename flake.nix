@@ -11,7 +11,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     vortex-src = {
-      url = "github:Nexus-Mods/Vortex/v2.4.0";
+      url = "github:Nexus-Mods/Vortex/v2.4.1";
       flake = false;
     };
   };

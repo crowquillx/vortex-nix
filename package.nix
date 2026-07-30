@@ -23,7 +23,7 @@
 }:
 
 let
-  version = "2.4.0";
+  version = "2.4.1";
 
   pnpm = pnpm_11.override { nodejs-slim = nodejs_24; };
   electron = electron_42-bin;
@@ -35,7 +35,7 @@ let
 
   nexusApiSchema = fetchurl {
     url = "https://api.nexusmods.com/openapi.yaml";
-    hash = "sha256-WCJzAajIow8B+ujJ/fkTz92Ym+5G6v9+27VhkUbubXw=";
+    hash = "sha256-FagqgMw+DsGkf3rlDKagI262/M+EopiwbrArbbl45kQ=";
   };
 
   # pnpm's deploy command needs the original archives for Git-hosted
