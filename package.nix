@@ -23,7 +23,7 @@
 }:
 
 let
-  version = "2.4.2";
+  version = "2.5.0";
 
   pnpm = pnpm_11.override { nodejs-slim = nodejs_24; };
   electron = electron_42-bin;
@@ -31,11 +31,6 @@ let
   levelPivot = fetchurl {
     url = "https://nexus-mods.github.io/duckdb-level-pivot/current_release/v1.5.1/linux_amd64/level_pivot.duckdb_extension.gz";
     hash = "sha256-+CKjeCbhl1VXrv+7MPwaea1KEEi0VaQpugtr8DEBMGU=";
-  };
-
-  nexusApiSchema = fetchurl {
-    url = "https://api.nexusmods.com/openapi.yaml";
-    hash = "sha256-FagqgMw+DsGkf3rlDKagI262/M+EopiwbrArbbl45kQ=";
   };
 
   # pnpm's deploy command needs the original archives for Git-hosted
@@ -49,8 +44,8 @@ let
     })
     (fetchurl {
       name = "nexus-api.tar.gz";
-      url = "https://codeload.github.com/Nexus-Mods/node-nexus-api/tar.gz/97ad222d2d7aca05e581390eb85be9af22833fba";
-      hash = "sha512-+78ynmZZCtkbSljcu5wTVktuUwRgexyecsWCGWkJvxvKHql8hNNhsmPMCfDBQPKWT20WijfYVMJ589nAD/yhrQ==";
+      url = "https://codeload.github.com/Nexus-Mods/node-nexus-api/tar.gz/ac96897d5ea4eb1288dae4ed43a01ce9cdc075c0";
+      hash = "sha512-RFtUty2OkGOezRPWHLadZgltJK6mpCAlq8OaYHoFo3o0w8VcBWORm2w0CDxE/bgHzkoYP30bYDxUfIPnJjM9iQ==";
     })
     (fetchurl {
       name = "bbcode-to-react.tar.gz";
@@ -165,7 +160,7 @@ stdenv.mkDerivation (finalAttrs: {
     inherit (finalAttrs) version src;
     inherit pnpm;
     fetcherVersion = 4;
-    hash = "sha256-5mnmVYTO7a+vZ4Cr3WrlB9fseBr8QRIFWucv/8CbTA8=";
+    hash = "sha256-+c2goVvDz9huzcVdWMdYDQGrhZ2+MCir5MfsTpd58Qc=";
   };
 
   nativeBuildInputs = [
@@ -221,7 +216,7 @@ stdenv.mkDerivation (finalAttrs: {
     }
 
     pinGitDependency Nexus-Mods/7z-bin 3298c42e69e3220dc39694bc2f610c077c3e213a ${builtins.elemAt gitDependencyTarballs 0}
-    pinGitDependency Nexus-Mods/node-nexus-api 97ad222d2d7aca05e581390eb85be9af22833fba ${builtins.elemAt gitDependencyTarballs 1}
+    pinGitDependency Nexus-Mods/node-nexus-api ac96897d5ea4eb1288dae4ed43a01ce9cdc075c0 ${builtins.elemAt gitDependencyTarballs 1}
     pinGitDependency TanninOne/bbcode-to-react c67356006470e5066ea447e04a3968dca367339d ${builtins.elemAt gitDependencyTarballs 2}
     pinGitDependency Nexus-Mods/node-bsatk 5a3d15fae2177bfb0a42b794d3afb21eda563c59 ${builtins.elemAt gitDependencyTarballs 3}
     pinGitDependency TanninOne/drivelist 720d1890db11482ec05fc0f6aa176cfa6e6844dd ${builtins.elemAt gitDependencyTarballs 4}
@@ -261,13 +256,6 @@ stdenv.mkDerivation (finalAttrs: {
       --replace-fail \
         '"platforms": ["windows_amd64", "linux_amd64"]' \
         '"platforms": ["linux_amd64"]'
-
-    # API bindings are normally generated from a live endpoint. Build from a
-    # fixed snapshot so that Nix's network-isolated build remains reproducible.
-    substituteInPlace packages/nexus-api-v3/package.json \
-      --replace-fail \
-        'https://api.nexusmods.com/openapi.yaml' \
-        '${nexusApiSchema}'
 
     # The build normally downloads this extension. Supply the pinned artifact
     # so the derivation remains network-independent.

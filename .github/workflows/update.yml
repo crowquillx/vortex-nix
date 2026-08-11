@@ -98,7 +98,7 @@ jobs:
 
           path = Path("package.nix")
           contents = path.read_text()
-          for name in ("levelPivot", "nexusApiSchema"):
+          for name in ("levelPivot",):
               pattern = rf'({name} = fetchurl \{{\n    url = "([^"]+)";\n    hash = )"[^"]+";'
               match = re.search(pattern, contents)
               if match is None:
