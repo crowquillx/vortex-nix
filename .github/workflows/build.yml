@@ -50,4 +50,4 @@ jobs:
         run: |
           store_path="$(readlink -f result)"
           cachix push vortex-nix "$store_path"
-          cachix pin vortex-nix latest "$store_path" --keep-revisions 3
+          cachix pin vortex-nix latest "$store_path" --keep-revisions 1
