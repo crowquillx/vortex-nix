@@ -23,7 +23,7 @@
 }:
 
 let
-  version = "2.6.2";
+  version = "2.6.3";
 
   pnpm = pnpm_11.override { nodejs-slim = nodejs_24; };
   electron = electron_42-bin;
