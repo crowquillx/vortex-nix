@@ -20,15 +20,29 @@ vortex
 
 The daily update workflow follows the latest stable GitHub release from
 `Nexus-Mods/Vortex`. It ignores prereleases and untagged branch commits, updates
-the source lock and dependency hash, verifies a full build, and then opens a
-pull request.
+the source lock and dependency hash, and runs `nix flake check --no-build` plus
+a full package build. When those checks pass, it commits the update and opens
+or updates the matching pull request.
+
+A separate job checks that the pull request is still open, targets `main`, uses
+the expected automation branch, and is based on the same `main` commit used by
+the build. It then squash-merges the pull request and confirms the merge before
+starting the build workflow on `main`. The explicit dispatch is required
+because a push made with `GITHUB_TOKEN` does not start another workflow.
+
+If the package build fails, the updater stops before pushing or opening its
+update pull request. If `main` or the pull request changes while the build
+runs, the merge job stops without merging. The next scheduled run tries the
+update again. When no newer stable release exists, the updater completes
+successfully without creating or merging a pull request.
 
 ## Binary cache
 
 Successful builds from the `main` branch are published to the public
-`vortex-nix` Cachix cache. Passing `--accept-flake-config` lets Nix use the
-cache URL and signing key declared by this flake instead of rebuilding Vortex
-locally.
+`vortex-nix` Cachix cache. The update workflow starts this build after merging
+an update, so the merged package is checked and cached on `main`. Passing
+`--accept-flake-config` lets Nix use the cache URL and signing key declared by
+this flake instead of rebuilding Vortex locally.
 
 When consuming this package as an input of another flake, add the cache to the
 root flake because Nix only applies `nixConfig` from the flake being invoked:
