@@ -25,16 +25,16 @@
     "vortex-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1791277832,
-        "narHash": "sha256-9knOr8sAbUfR+/naEr6kcylP0JG8b8SwUSlJyjrZ7SA=",
+        "lastModified": 1791801284,
+        "narHash": "sha256-pkwUEsXQ1UKkaC1p0D6MA6gw6cGX/BiBpfkn6bqy0jM=",
         "owner": "Nexus-Mods",
         "repo": "Vortex",
-        "rev": "29cd69a56bae618d8d345a2f1a65168f8a6535c4",
+        "rev": "336ab9806487af5e8a9ba24ed98329fb217555be",
         "type": "github"
       },
       "original": {
         "owner": "Nexus-Mods",
-        "ref": "v2.8.0",
+        "ref": "v2.8.1",
         "repo": "Vortex",
         "type": "github"
       }
