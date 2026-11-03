@@ -23,7 +23,7 @@
 }:
 
 let
-  version = "2.9.1";
+  version = "2.10.0";
 
   pnpm = pnpm_11.override { nodejs-slim = nodejs_24; };
   electron = electron_42-bin;
@@ -96,7 +96,7 @@ stdenv.mkDerivation (finalAttrs: {
     inherit (finalAttrs) version src;
     inherit pnpm;
     fetcherVersion = 4;
-    hash = "sha256-xJh4DZoUbjo302+bilLwteSMUw0Crva+w/k7DCB0doM=";
+    hash = "sha256-ee1UnRVSYAPXQwBHM+WccAGrgJLAYzibUqwM8WOkTJI=";
   };
 
   nativeBuildInputs = [
