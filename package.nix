@@ -142,6 +142,39 @@ stdenv.mkDerivation (finalAttrs: {
         --replace-fail "${dependency.url}" "file:${dependency.archive}"
     '') gitDependencyTarballs}
 
+    # pnpm rejects overrides which reference a catalog entry using the file:
+    # protocol, so resolve such overrides to the rewritten archive directly.
+    python3 - <<'PYTHON'
+    import re
+    from pathlib import Path
+
+    path = Path("pnpm-workspace.yaml")
+    lines = path.read_text().splitlines(keepends=True)
+    entry = re.compile(r'^  ("?)([^":\s][^":]*)\1: *(.*?)\s*$')
+
+    def section(name):
+        start = next((i for i, line in enumerate(lines) if line.rstrip() == f"{name}:"), None)
+        if start is None:
+            return range(0)
+        end = start + 1
+        while end < len(lines) and (lines[end].startswith(" ") or not lines[end].strip()):
+            end += 1
+        return range(start + 1, end)
+
+    catalog = {}
+    for i in section("catalog"):
+        match = entry.match(lines[i])
+        if match and match.group(3).strip("\"'").startswith("file:"):
+            catalog[match.group(2)] = match.group(3).strip("\"'")
+
+    for i in section("overrides"):
+        match = entry.match(lines[i])
+        if match and match.group(3).strip("\"'") == "catalog:" and match.group(2) in catalog:
+            lines[i] = f'  {match.group(1)}{match.group(2)}{match.group(1)}: "{catalog[match.group(2)]}"\n'
+
+    path.write_text("".join(lines))
+    PYTHON
+
     substituteInPlace src/main/package.json \
       --replace-fail '"version": "1.0.0"' '"version": "${version}"'
 
